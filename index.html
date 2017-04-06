@@ -3,17 +3,7 @@
 
 <head>
     <title>Socket.IO tests</title>
-    <!--<link rel="stylesheet" type="text/css" href="./style.css" />-->
-    <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font: 13px Helvetica, Arial; }
-      form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
-      form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
-      form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
-      #messages { list-style-type: none; margin: 0; padding: 0; }
-      #messages li { padding: 5px 10px; }
-      #messages li:nth-child(odd) { background: #eee; }
-    </style>
+    <link rel="stylesheet" type="text/css" href="./style.css" />
 </head>
 
 <body>
@@ -21,10 +11,239 @@
     <script>
         var socket = io();
     </script>
-    <ul id="messages"></ul>
+    <!--<ul id="messages"></ul>
     <form action="">
         <input id="m" autocomplete="off" /><button>Send</button>
-    </form>
+    </form>-->
+
+    <div id="container"></div>
+
+    <script src="js/three.js"></script>
+    <script src="js/libs/stats.min.js"></script>
+    <script src="js/controls/TrackballControls.js"></script>
+
+    <script src="js/jquery-1.10.2.min.js"></script>
+
+    <script type="x-shader/x-vertex" id="vertexShader">
+
+    // switch on high precision floats
+    #ifdef GL_ES
+    precision highp float;
+    #endif
+
+    attribute vec3 translate;
+    attribute vec3 color;
+
+    uniform float time;
+    uniform float point_size;
+
+    varying vec2 vUv;
+    varying vec3 vertex_normal;
+    varying vec3 vertex_color;
+
+    void main ()
+    {
+      // first, things to be sent to fragmentShader
+      vUv = uv;
+      vertex_normal = normal;
+      vertex_color = color;
+
+      // then, vertexShader related stuff
+      //scale = point_size;  //just for the sake of simplicity
+
+      vec4 mvPosition = modelViewMatrix * vec4(translate, 1.0);
+      //vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+      //mvPosition.xyz += position * scale;
+      mvPosition.xyz += position;
+
+      gl_Position = projectionMatrix * mvPosition;                                // multiple instanced geometry
+    }
+
+  </script>
+
+  <script type="x-shader/x-fragment" id="fragmentShader">
+
+    // switch on high precision floats
+    #ifdef GL_ES
+    precision highp float;
+    #endif
+
+    varying vec2 vUv;
+    varying vec3 vertex_normal;
+    varying vec3 vertex_color;
+
+    uniform float time;
+
+    void main ()
+    {
+      vec3 light = vec3(0.6, 0.7, 1.0);
+      light = normalize(light);
+      float dot_product_light = max(0.0, dot(vertex_normal, light));
+
+      vec3 fixed_color = vec3(1, 0, 0.2);
+
+      float scale =  max((sin(time) + cos (time)), 0.5);  
+
+      //gl_FragColor = vec4(diffuseColor.xyz * vec3(vertex_color * dot_product_light), diffuseColor.w);             //  adding color + light + texture to fake 3d sphere
+      //gl_FragColor = vec4(vec3(vertex_color * dot_product_light), 1.0);                   //  adding color + light + color coming from outside
+      //gl_FragColor = vec4(vec3(fixed_color * dot_product_light), 1.0);                    //  adding color + light + fixed color
+      //gl_FragColor = vec4(vec3(vUv * dot_product_light, 0.0), 1.0);                       //  adding color + light
+      //gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);                                            //  logic for no shading
+      gl_FragColor = vec4(vec3(vUv, 0.0), 1.0);                                           // adding color
+    }
+
+  </script>
+
+  <script>
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 10000);
+    var mouse = new THREE.Vector2(), INTERSECTED;
+    var controls, stats, renderer, raycaster, container;
+    var shaderMaterial, instanced_sphere, numberOfRows, instancedGeometry, pointSize, pointColor;
+    var objectType;
+
+    var numberOfPoints;
+    var pointsArray = [];
+
+    socket.on('update', function(loadingFunction){
+        loadObjects();
+        console.log('time to render!!!');
+    });
+
+    function loadObjects() {
+      var urlToGetData = "https://petrel-collaboration-dev.appspot.com/api/v1/Syncer/GetObjectsOnDemand/PointSet.Points/893131b8-ae9c-4500-b0fb-4d3970f504b4/Point";
+
+       console.log("fetching started.. ");
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', urlToGetData, false);
+        xhr.onload = () => {
+            var pointData = JSON.parse(xhr.responseText);
+
+            numberOfPoints = pointData.size;
+            // console.log("and the numberOfPoints: " + numberOfPoints);
+           
+
+            for (var i = 0; i < numberOfPoints * 3; i++) {
+                pointsArray[i] = pointData.data[i];
+            }
+
+            console.log("fetching complete");
+        }
+
+        xhr.onerror = function (err) {
+            alert('poop happened', err);
+        }
+
+        xhr.send();
+
+        init();
+        addPoints();
+        animate();
+    }
+
+    function addObjects(data)
+    {
+      // set up the sphere variables
+      var radius = 5, segments = 16, rings = 16;
+
+      shaderMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          time: { value: 0.0 },
+          point_size: {value: 1.0}
+        },
+        vertexShader: document.getElementById('vertexShader').textContent,
+        fragmentShader: document.getElementById('fragmentShader').textContent,
+
+        transparent: true
+      });
+    }
+
+    function addPoints() {
+      var pointShaderMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          time: { value: 0.0 },
+          point_size: { value: 1.0 }
+        },
+        vertexShader: document.getElementById('vertexShader').textContent,
+        fragmentShader: document.getElementById('fragmentShader').textContent,
+
+        transparent: true
+      });
+
+      var pointGeometryInstanced = new THREE.InstancedBufferGeometry();
+      pointGeometryInstanced.copy(new THREE.SphereBufferGeometry(5, 10, 10));
+
+      //shaders multiinstancing-ish
+      var translateArrayForinstancing = new Float32Array(numberOfPoints * 3);
+      for (var i = 0, i3 = 0; i < numberOfPoints * 3; i++, i3 += 3) {
+        translateArrayForinstancing[i] = pointsArray[i];
+      }
+
+      pointGeometryInstanced.addAttribute("translate", new THREE.InstancedBufferAttribute(translateArrayForinstancing, 3, 1));
+
+      var pointMeshInstanced = new THREE.Mesh(pointGeometryInstanced, pointShaderMaterial);
+      pointMeshInstanced.frustumCulled = false;
+      scene.add(pointMeshInstanced);
+
+      camera.position.z = 1000;
+
+    }
+
+
+    function init()
+    {
+      container = document.getElementById("container");
+
+      raycaster = new THREE.Raycaster();
+      renderer = new THREE.WebGLRenderer({antialias: true});
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      container.appendChild(renderer.domElement);
+      stats = new Stats();
+      container.appendChild(stats.dom);
+      renderer.domElement.addEventListener('mousemove', onmousemove, false);
+      window.addEventListener('resize', onWindowResize, false);
+
+      // add controls to the screen
+      controls = new THREE.TrackballControls(camera, renderer.domElement);
+      controls.rotateSpeed = 20.0;
+      controls.zoomSpeed = 1.2;
+      controls.rotateCamera();
+
+      controls.panSpeed = 0.8;
+      controls.noZoom = false;
+      controls.noPan = false;
+      controls.staticMoving = true;
+
+      controls.dynamicDampingFactor = 0.5;
+      controls.keys = [65, 83, 68];
+      controls.addEventListener('change', render);
+      // end of controls
+    }
+
+    function onWindowResize()
+    {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function animate()
+    {
+      requestAnimationFrame(animate);
+      render();
+      stats.update();
+      controls.update();
+    }
+
+    function render()
+    {
+      renderer.render(scene, camera);
+    }
+
+  </script>
+
+
 </body>
 
 </html>
