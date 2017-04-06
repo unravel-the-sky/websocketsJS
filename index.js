@@ -33,7 +33,7 @@ server.listen(3000, () => {
 var localVersionNumber = "null";
 console.log("local version number: " + localVersionNumber);
 
-var myNewObservable = Rx.Observable.interval(500).do();
+var myNewObservable = Rx.Observable.interval(1000).do();
 myNewObservable.subscribe(
     () => checkServerForUpdates(),
     (err) => console.log('error: ' + err)
@@ -67,7 +67,7 @@ function checkServerForUpdates() {
         // console.log("version number at server: " + versionNumberAtServer);
         if (versionNumberAtServer != localVersionNumber){
             console.log("something changed! fetch data!..");
-            io.emit('update');
+            io.emit('update', 'loadObjects');
             localVersionNumber = versionNumberAtServer;
         }
     }

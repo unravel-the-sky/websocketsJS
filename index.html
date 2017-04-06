@@ -107,7 +107,7 @@
 
     socket.on('update', function(loadingFunction){
         loadObjects();
-        console.log('time to render!!!');
+        console.log('something happened, re-render!!!');
     });
 
     function loadObjects() {
@@ -136,6 +136,12 @@
         }
 
         xhr.send();
+
+        console.log('children' + scene.children.length);
+        while(scene.children.length > 0){ 
+            console.log('deleting');
+            scene.remove(scene.children[0]); 
+        }
 
         init();
         addPoints();
