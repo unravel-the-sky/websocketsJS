@@ -102,51 +102,18 @@
     var shaderMaterial, instanced_sphere, numberOfRows, instancedGeometry, pointSize, pointColor;
     var objectType;
 
-    var numberOfPoints;
-    var pointsArray = [];
+    var pointMeshInstanced;
 
-    socket.on('update', function(loadingFunction){
-        loadObjects();
+    // var numberOfPoints;
+    // var pointsArray = [];
+
+    init();
+    animate();
+
+    socket.on('update', function(pointsFromServer, numberOfPoints){
+        addPoints(pointsFromServer, numberOfPoints);
         console.log('something happened, re-render!!!');
     });
-
-    function loadObjects() {
-      var urlToGetData = "https://petrel-collaboration-dev.appspot.com/api/v1/Syncer/GetObjectsOnDemand/PointSet.Points/893131b8-ae9c-4500-b0fb-4d3970f504b4/Point";
-
-       console.log("fetching started.. ");
-
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', urlToGetData, false);
-        xhr.onload = () => {
-            var pointData = JSON.parse(xhr.responseText);
-
-            numberOfPoints = pointData.size;
-            // console.log("and the numberOfPoints: " + numberOfPoints);
-           
-
-            for (var i = 0; i < numberOfPoints * 3; i++) {
-                pointsArray[i] = pointData.data[i];
-            }
-
-            console.log("fetching complete");
-        }
-
-        xhr.onerror = function (err) {
-            alert('poop happened', err);
-        }
-
-        xhr.send();
-
-        console.log('children' + scene.children.length);
-        while(scene.children.length > 0){ 
-            console.log('deleting');
-            scene.remove(scene.children[0]); 
-        }
-
-        init();
-        addPoints();
-        animate();
-    }
 
     function addObjects(data)
     {
@@ -165,7 +132,7 @@
       });
     }
 
-    function addPoints() {
+    function addPoints(pointsFromServer, numberOfPoints) {
       var pointShaderMaterial = new THREE.ShaderMaterial({
         uniforms: {
           time: { value: 0.0 },
@@ -180,16 +147,26 @@
       var pointGeometryInstanced = new THREE.InstancedBufferGeometry();
       pointGeometryInstanced.copy(new THREE.SphereBufferGeometry(5, 10, 10));
 
+      console.log('number of points: ' + numberOfPoints);
+
+      if (scene.getObjectByName('PointObject')){
+        console.log('object exists!');
+        scene.remove(pointMeshInstanced);
+      }
+      else
+        console.log('object does not exist..');
+
       //shaders multiinstancing-ish
       var translateArrayForinstancing = new Float32Array(numberOfPoints * 3);
       for (var i = 0, i3 = 0; i < numberOfPoints * 3; i++, i3 += 3) {
-        translateArrayForinstancing[i] = pointsArray[i];
+        translateArrayForinstancing[i] = pointsFromServer[i];
       }
 
       pointGeometryInstanced.addAttribute("translate", new THREE.InstancedBufferAttribute(translateArrayForinstancing, 3, 1));
 
-      var pointMeshInstanced = new THREE.Mesh(pointGeometryInstanced, pointShaderMaterial);
+      pointMeshInstanced = new THREE.Mesh(pointGeometryInstanced, pointShaderMaterial);
       pointMeshInstanced.frustumCulled = false;
+      pointMeshInstanced.name = 'PointObject';
       scene.add(pointMeshInstanced);
 
       camera.position.z = 1000;
