@@ -77,14 +77,14 @@ var numberOfPoints;
 
 const pollingPetrelStuff = Rx.Observable.interval(200)
     .concatMap(() => {
-        return fetch(urlToFetchVersionNewPoint).then(res => res.text())
+        return fetch(urlToFetchVersion).then(res => res.text())
     })
     .do(versionNumberAtServer => {
         // console.log(versionNumberAtServer);
         if (versionNumberAtServer != localVersionNumber) {
             console.log("something changed! fetching data from the new Rx!..");
             // fetch the point data here
-            fetch(urlToGetDataNewPoint)
+            fetch(urlToGetData)
                 .then(response => response.json())
                 .then(pointsData => {
                     console.log(pointsData);
@@ -99,7 +99,7 @@ const pollingPetrelStuff = Rx.Observable.interval(200)
                     console.log("fetching complete");
                     io.emit('update', pointsArray, numberOfPoints);
                 })
-
+            console.log('setting localVersionNumber to Server..');
             localVersionNumber = versionNumberAtServer;
         }
     })

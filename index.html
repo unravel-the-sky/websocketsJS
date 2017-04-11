@@ -163,10 +163,27 @@
       else
         console.log('object does not exist..');
 
+      var simpleBigObject = new THREE.Object3D();
+      var simpleMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+
       //shaders multiinstancing-ish
       var translateArrayForinstancing = new Float32Array(numberOfPoints * 3);
       for (var i = 0, i3 = 0; i < numberOfPoints * 3; i++, i3 += 3) {
         translateArrayForinstancing[i] = pointsFromServer[i];
+      }
+
+      // this is only for getting the bounding box right
+      for (var i3 = 0; i3 < numberOfPoints * 3; i3 += 3) {
+        var simpleGeometry = new THREE.BoxGeometry(5, 5, 5);
+        var simpleMesh = new THREE.Mesh(simpleGeometry, simpleMaterial);
+
+        simpleMesh.position.x = pointsFromServer[i3];
+        simpleMesh.position.y = pointsFromServer[i3+1];
+        simpleMesh.position.z = pointsFromServer[i3+2];
+
+        simpleMesh.geometry.computeBoundingBox();
+
+        simpleBigObject.add(simpleMesh);
       }
 
       pointGeometryInstanced.addAttribute("translate", new THREE.InstancedBufferAttribute(translateArrayForinstancing, 3, 1));
@@ -174,11 +191,53 @@
       pointMeshInstanced = new THREE.Mesh(pointGeometryInstanced, pointShaderMaterial);
       pointMeshInstanced.frustumCulled = false;
       pointMeshInstanced.name = 'PointObject';
+
+      simpleBigObject.updateMatrixWorld();
+
+      pointMeshInstanced.updateMatrixWorld();
+
+      // simpleBigObject.geometry.computeBoundingBox();
+
+      var boundingBox = getCenterPoint(pointMeshInstanced);
+      console.log('bounding box: ' + boundingBox);
+
+      bb = new THREE.Box3();
+      bb.setFromObject(pointMeshInstanced);
+
+      var xCoord = (bb.max.x + bb.min.x) / 2;
+      var yCoord = (bb.max.y + bb.min.y) / 2;
+      var zCoord = (bb.max.z + bb.min.z) / 2;
+
+      camera.position.x = xCoord;
+      camera.position.y = yCoord;
+      camera.position.z = yCoord*3;
+
+      camera.lookAt(xCoord, yCoord, 0);
+
+      console.log('x coordinate of the bounding box: ' + xCoord);
+      console.log('y coordinate of the bounding box: ' + yCoord);
+
       scene.add(pointMeshInstanced);
 
-      camera.position.z = 1000;
+      // camera.position.z = 4000;
 
     }
+
+    function getCenterPoint(mesh) {
+      var middle = new THREE.Vector3();
+      var geometry = mesh.geometry;
+
+      geometry.computeBoundingBox();
+
+      middle.x = (geometry.boundingBox.max.x + geometry.boundingBox.min.x) / 2;
+      middle.y = (geometry.boundingBox.max.y + geometry.boundingBox.min.y) / 2;
+      middle.z = (geometry.boundingBox.max.z + geometry.boundingBox.min.z) / 2;
+
+      console.log(middle.x);
+
+      mesh.localToWorld( middle );
+      return middle;
+  }
 
 
     function init()
