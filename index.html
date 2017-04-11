@@ -108,12 +108,19 @@
     // var pointsArray = [];
 
     init();
+    console.log('initializing..');
     animate();
+    console.log('animating..');
 
     socket.on('update', function(pointsFromServer, numberOfPoints){
-        addPoints(pointsFromServer, numberOfPoints);
-        console.log('something happened, re-render!!!');
+      console.log('something happened, re-render!!!');
+      addPoints(pointsFromServer, numberOfPoints);
     });
+
+    function fetchDataOnStartup(){
+      console.log('fetching data on startup..');
+      socket.emit('fetch');
+    }
 
     function addObjects(data)
     {

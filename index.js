@@ -22,6 +22,8 @@ app.use((err, req, res, next) => {
 
 io.on('connection', (socket) => {
     console.log('a user is connected');
+    console.log('startup msg came from html, sending data..');
+    io.emit('update', pointsArray, numberOfPoints);
     socket.on('disconnect', () => {
         console.log('user disconnected');
     })
@@ -35,6 +37,7 @@ var localVersionNumber = "null";
 console.log("local version number: " + localVersionNumber);
 
 const urlToFetchVersion = "https://petrel-collaboration-dev.appspot.com/api/v1/Syncer/GetVersionNumber/PointSet/893131b8-ae9c-4500-b0fb-4d3970f504b4";
+const urlToFetchVersionNewPoint = "https://petrel-collaboration-dev.appspot.com/api/v1/Syncer/GetVersionNumber/PointSet/newPointGuid";
 
 
 // NEW OBSERVABLE TESTING STUFF
@@ -68,33 +71,35 @@ const pollingStuff = Rx.Observable.interval(1000)
 // );
 
 const urlToGetData = "https://petrel-collaboration-dev.appspot.com/api/v1/Syncer/GetObjectsOnDemand/PointSet.Points/893131b8-ae9c-4500-b0fb-4d3970f504b4/Point";
+const urlToGetDataNewPoint = "https://petrel-collaboration-dev.appspot.com/api/v1/Syncer/GetObjectsOnDemand/PointSet.Points/newPointGuid/Point";
 var pointsArray = [];
+var numberOfPoints;
 
-const pollingPetrelStuff = Rx.Observable.interval(1000)
+const pollingPetrelStuff = Rx.Observable.interval(200)
     .concatMap(() => {
-        return fetch(urlToFetchVersion).then(res => res.text())
+        return fetch(urlToFetchVersionNewPoint).then(res => res.text())
     })
     .do(versionNumberAtServer => {
         // console.log(versionNumberAtServer);
         if (versionNumberAtServer != localVersionNumber) {
             console.log("something changed! fetching data from the new Rx!..");
             // fetch the point data here
-            fetch(urlToGetData)
-            .then(response => response.json())
-            .then(pointsData => {
-                console.log(pointsData);
+            fetch(urlToGetDataNewPoint)
+                .then(response => response.json())
+                .then(pointsData => {
+                    console.log(pointsData);
 
-                let numberOfPoints = pointsData.size;
-                console.log("numberOfPoints: " + numberOfPoints);
+                    numberOfPoints = pointsData.size;
+                    console.log("numberOfPoints: " + numberOfPoints);
 
-                for (var i = 0; i < numberOfPoints * 3; i++) {
-                    pointsArray[i] = pointsData.data[i];
-                }
+                    for (var i = 0; i < numberOfPoints * 3; i++) {
+                        pointsArray[i] = pointsData.data[i];
+                    }
 
-                console.log("fetching complete");
-                io.emit('update', pointsArray, numberOfPoints);
-            })
-            
+                    console.log("fetching complete");
+                    io.emit('update', pointsArray, numberOfPoints);
+                })
+
             localVersionNumber = versionNumberAtServer;
         }
     })
@@ -107,6 +112,12 @@ pollingPetrelStuff.subscribe(
     (error) => console.log(error),
     () => console.log('doneeee')
 )
+
+io.on('fetch', function () {
+    console.log('startup msg came from html, sending data..');
+    io.emit('update', pointsArray, numberOfPoints);
+    console.log('emitted' + numberOfPoints);
+})
 
 // concatMap example:
 //emit 'Hello' and 'Goodbye'
