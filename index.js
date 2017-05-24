@@ -1,6 +1,7 @@
 var app = require('express')();
 var server = require('http').Server(app);
-var io = require('socket.io')(server);
+// var io = require('socket.io')(server);
+var io = require('socket.io-client');
 var Rx = require('Rx');
 var XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
 var $ = require('jquery');
@@ -20,18 +21,26 @@ app.use((err, req, res, next) => {
     res.status(500).send('something BROKE..');
 })
 
-io.on('connection', (socket) => {
-    console.log('a user is connected');
-    console.log('startup msg came from html, sending data..');
-    io.emit('update', pointsArray, numberOfPoints);
-    socket.on('disconnect', () => {
-        console.log('user disconnected');
-    })
-})
+// io.on('connection', (socket) => {
+//     console.log('a user is connected');
+//     console.log('startup msg came from html, sending data..');
+//     io.emit('update', pointsArray, numberOfPoints);
+//     socket.on('disconnect', () => {
+//         console.log('user disconnected');
+//     })
+// })
 
 server.listen(3000, () => {
     console.log('listening on *: 3000');
 });
+
+
+
+var newSocket = io('wss://collaboration.rns.io/notifications');
+console.log('socket is being connected..' + newSocket.id);
+newSocket.on('connect', function() {
+    console.log('connected to the coloud and with socket id: ' + newSocket.id);
+})
 
 var localVersionNumber = "null";
 console.log("local version number: " + localVersionNumber);
@@ -107,17 +116,17 @@ const pollingPetrelStuff = Rx.Observable.interval(200)
     .take(1);
 
 
-pollingPetrelStuff.subscribe(
-    (data) => console.log(data),
-    (error) => console.log(error),
-    () => console.log('doneeee')
-)
+// pollingPetrelStuff.subscribe(
+//     (data) => console.log(data),
+//     (error) => console.log(error),
+//     () => console.log('doneeee')
+// )
 
-io.on('fetch', function () {
-    console.log('startup msg came from html, sending data..');
-    io.emit('update', pointsArray, numberOfPoints);
-    console.log('emitted' + numberOfPoints);
-})
+// io.on('fetch', function () {
+//     console.log('startup msg came from html, sending data..');
+//     io.emit('update', pointsArray, numberOfPoints);
+//     console.log('emitted' + numberOfPoints);
+// })
 
 // concatMap example:
 //emit 'Hello' and 'Goodbye'
@@ -156,7 +165,7 @@ function checkServerForUpdates() {
         // console.log("version number at server: " + versionNumberAtServer);
         if (versionNumberAtServer != localVersionNumber) {
             console.log("something changed! fetch data!..");
-            io.emit('update', 'loadObjects');
+            // io.emit('update', 'loadObjects');
             localVersionNumber = versionNumberAtServer;
         }
     }

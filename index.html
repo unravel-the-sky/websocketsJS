@@ -37,6 +37,8 @@
     varying vec3 vertex_normal;
     varying vec3 vertex_color;
 
+    float scale;
+
     void main ()
     {
       // first, things to be sent to fragmentShader
@@ -45,12 +47,12 @@
       vertex_color = color;
 
       // then, vertexShader related stuff
-      //scale = point_size;  //just for the sake of simplicity
+      scale = point_size;  //just for the sake of simplicity
 
       vec4 mvPosition = modelViewMatrix * vec4(translate, 1.0);
       //vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-      //mvPosition.xyz += position * scale;
-      mvPosition.xyz += position;
+      mvPosition.xyz += position * scale;
+      // mvPosition.xyz += position;
 
       gl_Position = projectionMatrix * mvPosition;                                // multiple instanced geometry
     }
@@ -82,10 +84,10 @@
 
       //gl_FragColor = vec4(diffuseColor.xyz * vec3(vertex_color * dot_product_light), diffuseColor.w);             //  adding color + light + texture to fake 3d sphere
       //gl_FragColor = vec4(vec3(vertex_color * dot_product_light), 1.0);                   //  adding color + light + color coming from outside
-      //gl_FragColor = vec4(vec3(fixed_color * dot_product_light), 1.0);                    //  adding color + light + fixed color
-      //gl_FragColor = vec4(vec3(vUv * dot_product_light, 0.0), 1.0);                       //  adding color + light
+      gl_FragColor = vec4(vec3(fixed_color * dot_product_light), 1.0);                    //  adding color + light + fixed color
+      // gl_FragColor = vec4(vec3(vUv * dot_product_light, 0.0), 1.0);                       //  adding color + light
       //gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);                                            //  logic for no shading
-      gl_FragColor = vec4(vec3(vUv, 0.0), 1.0);                                           // adding color
+      // gl_FragColor = vec4(vec3(vUv, 0.0), 1.0);                                           // adding color
     }
 
   </script>
@@ -126,7 +128,7 @@
       shaderMaterial = new THREE.ShaderMaterial({
         uniforms: {
           time: { value: 0.0 },
-          point_size: {value: 1.0}
+          point_size: {value: 6.0}
         },
         vertexShader: document.getElementById('vertexShader').textContent,
         fragmentShader: document.getElementById('fragmentShader').textContent,
@@ -204,9 +206,9 @@
       var yCoord = (bb.max.y + bb.min.y) / 2;
       var zCoord = (bb.max.z + bb.min.z) / 2;
 
-      camera.position.x = xCoord;
-      camera.position.y = yCoord;
-      camera.position.z = yCoord*3;
+      // camera.position.x = xCoord;
+      // camera.position.y = yCoord;
+      // camera.position.z = yCoord*3;
 
       camera.lookAt(xCoord, yCoord, 0);
 
@@ -215,7 +217,7 @@
 
       scene.add(pointMeshInstanced);
 
-      // camera.position.z = 4000;
+      camera.position.z = 2000;
 
     }
 
